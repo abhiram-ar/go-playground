@@ -13,6 +13,7 @@ var (
 	p  = &Vertex{10, 20}
 )
 
+
 func main() {
 	fmt.Println(v1, v2, v3, p)
 }
