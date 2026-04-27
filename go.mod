@@ -1,4 +1,4 @@
-module tour/hello
+module playground
 
 go 1.25.4
 
