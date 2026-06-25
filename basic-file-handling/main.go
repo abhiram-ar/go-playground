@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"time"
 )
@@ -21,13 +23,22 @@ func main() {
 	fmt.Println("append file:", appendFile(newFilePath, []byte("::appened to the file file")))
 
 	data, err := readFile(exisingFilePath)
-	fmt.Println("read file:", string(data), err)
+	fmt.Println("\nread file:", string(data), err)
 
 	size, modTime, _ := fileStatus(exisingFilePath)
-	fmt.Println("file size", size)
-	fmt.Println("file last modified time", modTime)
+	fmt.Println("\nfile size:", size)
+	fmt.Println("file last modified time:", modTime)
 
 	// fmt.Println("delete file:", deleteFile(newFilePath))
+
+	copiedPath := "./testFiles/theCopiedOne.txt"
+	fmt.Println("copying file:", copyFile(exisingFilePath, copiedPath))
+
+	fmt.Println("\nlisted files:")
+	listedFiles, _ := listDirFiles("./")
+	for _, listedFile := range listedFiles {
+		fmt.Println(listedFile.Name())
+	}
 
 }
 
@@ -131,4 +142,52 @@ func fileStatus(path string) (int64, time.Time, error) {
 	size := info.Size()
 	modTime := info.ModTime()
 	return size, modTime, nil
+}
+
+func copyFile(srcPath, destPath string) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	// we can also open an exising file
+	dest, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer dest.Close() // any data in the interal buffer will be flushed when Close() is closed*
+
+	noOfBytesCopied, err := io.Copy(dest, src)
+	if err != nil {
+		return err
+	}
+
+	// Close() flushes your program's writes to the OS - but the OS may still hold them in its cache.
+	// Sync() flushes the OS cache all the way to the physical device.
+	// So Close() protects you if your program crashes. Sync() additionally protects you if the whole machine crashes.
+	err = dest.Sync()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("no of bytes written:", noOfBytesCopied)
+
+	return nil
+}
+
+func listDirFiles(dirPath string) ([]fs.DirEntry, error) {
+	entiries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	listedFiles := make([]fs.DirEntry, 0)
+	for _, entry := range entiries {
+		if !entry.IsDir() {
+			listedFiles = append(listedFiles, entry)
+		}
+	}
+
+	return listedFiles, nil
 }
